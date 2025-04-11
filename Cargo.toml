@@ -4,13 +4,17 @@ version = "1.0.0"
 edition = "2024"
 
 [dependencies]
-notify-rust = "4"
+notify-rust = { version = "4", default-features = false, features = ["d"] }
 clap = { version = "4", features = ["derive"] }
 rodio = "0.20.1"
 ctrlc = "3.4"
 
+[target.'cfg(windows)'.dependencies]
+notify-rust = { version = "4", default-features = true }
+
 [profile.release]
-opt-level = "s"
+opt-level = "z"
 codegen-units = 1
-lto = true
+lto = "fat"
 strip = true
+panic = 'abort'
