@@ -6,7 +6,7 @@ break_mins=5
 
 for ((i=1; i<=sessions; i++)); do
     echo "🚀 Work Session $i/$sessions | $(date +%H:%M)"
-    labt -S $work_mins -t "Good job! Time to rest!" -b "Mayushii wants tea!"
+    labt -M $work_mins -t "Good job! Time to rest!" -b "Mayushii wants tea!"
 
     exit_code=$?
     if [[ $exit_code -eq 2 ]]; then # labt returns code 2 when timer is interrupted with ctrl+c by user
@@ -14,7 +14,7 @@ for ((i=1; i<=sessions; i++)); do
     fi
     
     echo "☕ Break Time! | $(date +%H:%M)"
-    [[ $i -lt $sessions ]] && labt -S $break_mins -t "Back to experiments!" -b "Tutturu!~ Time to focus!"
+    [[ $i -lt $sessions ]] && labt -M $break_mins -t "Back to experiments!" -b "Tutturu!~ Time to focus!"
 done
 
 echo "🎉 All sessions complete!"
