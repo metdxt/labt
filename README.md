@@ -7,6 +7,9 @@
 ---
 
 ## **Installation**  
+
+Prebuild binaries are awailable for x86_64 Linux and Windows in the [latest release](https://github.com/metdxt/labt/releases/latest).
+
 ```bash
 cargo install --git https://github.com/metdxt/labt
 ```
