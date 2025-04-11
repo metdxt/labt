@@ -1,0 +1,15 @@
+[package]
+name = "labt"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+notify-rust = "4"
+clap = { version = "4", features = ["derive"] }
+rodio = "0.20.1"
+ctrlc = "3.4"
+
+[profile.release]
+opt-level = "s"
+codegen-units = 1
+lto = true

@@ -1,0 +1,76 @@
+name: Build and Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [x86_64-unknown-linux-gnu, x86_64-pc-windows-gnu]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev \
+            pkg-config \
+            gcc-mingw-w64-x86-64
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Prepare Artifact
+        shell: bash
+        run: |
+          # Determine binary name
+          if [[ "${{ matrix.target }}" == *"windows"* ]]; then
+            BIN_NAME="labt.exe"
+          else
+            BIN_NAME="labt"
+          fi
+
+          # Create unique artifact directory
+          mkdir -p "artifact-${{ matrix.target }}"
+          
+          # Copy binary with consistent naming
+          cp "target/${{ matrix.target }}/release/$BIN_NAME" "artifact-${{ matrix.target }}/labt-${{ matrix.target }}${BIN_NAME#labt}"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: labt-${{ matrix.target }}
+          path: "artifact-${{ matrix.target }}/labt-${{ matrix.target }}*"
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-files
+          pattern: labt-*
+          merge-multiple: true
+
+      - name: List Downloaded Files (Debug)
+        run: ls -la release-files/
+
+      - uses: softprops/action-gh-release@v1
+        with:
+          files: release-files/labt-*
+          body: |
+            **Labt v${{ github.ref_name }}**  
+            *"Time waits for no worldline!"*
