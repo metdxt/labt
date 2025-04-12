@@ -126,6 +126,7 @@ fn main() {
 
     if total_seconds == 0 {
         eprintln!("Error: Total duration must be greater than 0 seconds.");
+        eprintln!("Specify desired time with -H/--hours, -M/--minutes and/or -S/--seconds arguments.");
         process::exit(1);
     }
 
