@@ -1,0 +1,52 @@
+#!/bin/bash
+# HIIT Timer - Forge your convergence station!
+
+# Default intervals (seconds)
+WORK=30
+REST=10
+ROUNDS=8
+WARMUP=90
+COOLDOWN=60
+
+# Parse arguments
+while getopts "w:r:R:W:C:" opt; do
+  case $opt in
+    w) WORK=$OPTARG ;;
+    r) REST=$OPTARG ;;
+    R) ROUNDS=$OPTARG ;;
+    W) WARMUP=$OPTARG ;;
+    C) COOLDOWN=$OPTARG ;;
+    *) echo "Usage: $0 [-w work_sec] [-r rest_sec] [-R rounds] [-W warmup] [-C cooldown]"
+       exit 1
+  esac
+done
+
+# Time warp protocol
+echo "=== HIIT Session ==="
+echo "Work: ${WORK}s | Rest: ${REST}s | Rounds: $ROUNDS"
+[[ $WARMUP -gt 0 ]] && echo "Warm-up: ${WARMUP}s"
+[[ $COOLDOWN -gt 0 ]] && echo "Cooldown: ${COOLDOWN}s"
+
+# Warm-up phase
+if [[ $WARMUP -gt 0 ]]; then
+  labt -S $WARMUP -t "READY FOR WAR" -b "Target ${ROUNDS} convergence(s)" -n
+fi
+
+# HIIT Rounds
+for ((i=1; i<=ROUNDS; i++)); do
+  echo -e "\n🔥 ROUND $i/$ROUNDS [WORK]"
+  labt -S $WORK -t "MAXIMUM OUTPUT!" -b "This is the choice of Steins Gate" -n
+  
+  if [[ $i -ne $ROUNDS ]]; then
+    echo -e "\n🕳 ROUND $i/$ROUNDS [REST]"
+    labt -S $REST -t "RECURSIVE RECOVERY" -b "Divergence meter: $i/$ROUNDS" -n
+  fi
+done
+
+# Cooldown phase
+if [[ $COOLDOWN -gt 0 ]]; then
+  echo -e "\n❄️  Entering cryostasis"
+  labt -S $COOLDOWN -t "WORLDLINE STABILIZED" -b "Reading Steiner activated" -n
+fi
+
+echo -e "\n🎉 Time fracture complete! (Divergence: 1.048596%)"
