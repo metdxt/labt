@@ -73,5 +73,5 @@ jobs:
         with:
           files: release-files/labt-*
           body: |
-            **Labt v${{ github.ref_name }}**  
+            **Labt ${{ github.ref_name }}**  
             *"Time waits for no worldline!"*
