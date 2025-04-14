@@ -86,20 +86,31 @@ jobs:
           toolchain: stable
           targets: aarch64-unknown-linux-gnu
 
-      - name: Configure apt for arm64 (Ubuntu Ports)
+      - name: Configure apt for arm64 cross-compilation
         run: |
           # Add the arm64 architecture
           sudo dpkg --add-architecture arm64
-          # Define the Ubuntu version codename (e.g., noble for 24.04)
-          # This makes the script adaptable if the runner base image changes
+
+          # IMPORTANT: Add [arch=amd64] to existing sources to prevent 404s for arm64 on default repos
+          # Modify the main sources.list
+          sudo sed -i 's/^deb http/deb [arch=amd64] http/' /etc/apt/sources.list
+          # Modify other potential source files (like azure.sources or others in sources.list.d)
+          # This handles both .list and the newer .sources format
+          find /etc/apt/sources.list.d/ -type f -name '*.list' -exec sudo sed -i 's/^deb http/deb [arch=amd64] http/' {} +
+          find /etc/apt/sources.list.d/ -type f -name '*.sources' -exec sudo sed -i -e '/^Types: deb/a Architectures: amd64' {} + || echo "No .sources files found or sed failed, continuing..."
+
+
+          # Define the Ubuntu version codename
           UBUNTU_CODENAME=$(lsb_release -cs)
-          # Create a new sources list file for arm64 pointing to ports.ubuntu.com
-          # The [arch=arm64] ensures these sources are only used for arm64 packages
-          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${UBUNTU_CODENAME} main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/arm64.list
-          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${UBUNTU_CODENAME}-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64.list
-          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${UBUNTU_CODENAME}-backports main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64.list
-          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${UBUNTU_CODENAME}-security main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64.list
-          # Update package lists AFTER adding the architecture AND the new sources
+          # Add the Ubuntu Ports sources specifically for arm64
+          # Using a distinct filename like arm64-ports.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${UBUNTU_CODENAME} main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/arm64-ports.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${UBUNTU_CODENAME}-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64-ports.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${UBUNTU_CODENAME}-backports main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64-ports.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${UBUNTU_CODENAME}-security main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64-ports.list
+
+          # Update package lists AFTER all modifications
+          # This should now only check default repos for amd64 and ports repo for arm64
           sudo apt-get update -y
 
       - name: Install cross-compilation dependencies (aarch64 dbus & alsa)
@@ -111,26 +122,21 @@ jobs:
             libasound2-dev:arm64 \
             pkg-config
           # Ensure pkg-config can find the cross-compiled libraries
-          # Create the target directory if it doesn't exist
           sudo mkdir -p /usr/lib/aarch64-linux-gnu/pkgconfig
-          # Link only if the source directory exists and has files
           if [ -d "/usr/lib/aarch64-linux-gnu/pkgconfig" ] && [ "$(ls -A /usr/lib/aarch64-linux-gnu/pkgconfig)" ]; then
             sudo ln -sf /usr/lib/aarch64-linux-gnu/pkgconfig/* /usr/share/pkgconfig/ || echo "Symlinks might already exist or source is empty."
           else
             echo "Skipping symlink creation as /usr/lib/aarch64-linux-gnu/pkgconfig is empty or does not exist."
           fi
 
-
       - name: Build binary (cross-compile)
         # Set environment variables needed for cross-compiling C dependencies
         run: |
           export PKG_CONFIG_ALLOW_CROSS=1
-          # Point pkg-config specifically to the cross-arch paths
           export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig
           export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
           cargo build --release --target aarch64-unknown-linux-gnu --verbose
         env:
-          # Explicitly tell common sys crates to use pkg-config
           DBUS_SYS_USE_PKG_CONFIG: 1
           ALSA_SYS_USE_PKG_CONFIG: 1
 
@@ -143,7 +149,7 @@ jobs:
       - name: Upload artifact for release
         uses: actions/upload-artifact@v4
         with:
-          name: labt-linux-aarch64 # Unique name for the artifact
+          name: labt-linux-aarch64
           path: labt-linux-aarch64.tar.gz
 
   # Job to create the GitHub Release
