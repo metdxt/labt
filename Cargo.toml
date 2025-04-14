@@ -4,6 +4,12 @@ version = "1.0.2"
 edition = "2024"
 authors = ["METDXT <metdxt@obj.su>"]
 license = "MIT"
+description = "A worldline-accurate CLI timer"
+homepage = "https://github.com/metdxt/labt"
+repository = "https://github.com/metdxt/labt"
+readme = "README.md"
+keywords = ["cli", "timer"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 notify-rust = { version = "4", default-features = false, features = ["d"] }
