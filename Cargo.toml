@@ -1,5 +1,5 @@
 [package]
-name = "labt"
+name = "labtimer"
 version = "1.0.2"
 edition = "2024"
 authors = ["METDXT <metdxt@obj.su>"]
@@ -11,6 +11,10 @@ readme = "README.md"
 keywords = ["cli", "timer"]
 categories = ["command-line-utilities"]
 exclude = ["examples/*", ".github/*", "assets/logo.svg"]
+
+[[bin]]
+name = "labt"
+path = "src/main.rs"
 
 [dependencies]
 notify-rust = { version = "4", default-features = false, features = ["d"] }
