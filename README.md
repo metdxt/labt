@@ -35,7 +35,7 @@ Developed by the Future Gadget Lab, Labt (codenamed FG-016) is a worldline-accur
 
 ### Prebuilt binaries
 
-Prebuilt binaries are available for x86_64 Linux and Windows in [releases](https://github.com/metdxt/labt/releases).
+Prebuilt binaries are available for Linux(x86_64 and aarch64) and Windows(x86_64) in [releases](https://github.com/metdxt/labt/releases).
 Just download a fitting one and put it in some `PATH` directory.
 
 *NOTE: don't forget to `chmod +x` on linux.*
