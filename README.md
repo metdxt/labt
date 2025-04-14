@@ -3,13 +3,13 @@
 <table>
   <tr>
   <td>
-  
-  *"Oh no, my watch has stopped... But I've just wound it... Don't tell me it's broken." - Mayushii*
+
+  <img src="assets/logo.svg" width=128 height=128>
 
   </td>
   <td>
-
-  ![](/assets/logo.svg)
+  
+  *"Oh no, my watch has stopped... But I've just wound it... Don't tell me it's broken." - Mayushii*
 
   </td>
   </tr>
