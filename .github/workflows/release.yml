@@ -72,6 +72,7 @@ jobs:
           name: labt-windows-x86_64 # Unique name for the artifact
           path: labt-windows-x86_64.zip
 
+  # Job to build for Linux aarch64 (cross-compilation)
   build_linux_aarch64:
     name: Build Linux (aarch64)
     runs-on: ubuntu-latest
@@ -85,12 +86,24 @@ jobs:
           toolchain: stable
           targets: aarch64-unknown-linux-gnu
 
-      - name: Install cross-compilation dependencies (aarch64 dbus & alsa)
+      - name: Configure apt for arm64 (Ubuntu Ports)
         run: |
           # Add the arm64 architecture
           sudo dpkg --add-architecture arm64
-          # Update package lists AFTER adding the architecture
+          # Define the Ubuntu version codename (e.g., noble for 24.04)
+          # This makes the script adaptable if the runner base image changes
+          UBUNTU_CODENAME=$(lsb_release -cs)
+          # Create a new sources list file for arm64 pointing to ports.ubuntu.com
+          # The [arch=arm64] ensures these sources are only used for arm64 packages
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${UBUNTU_CODENAME} main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/arm64.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${UBUNTU_CODENAME}-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${UBUNTU_CODENAME}-backports main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${UBUNTU_CODENAME}-security main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64.list
+          # Update package lists AFTER adding the architecture AND the new sources
           sudo apt-get update -y
+
+      - name: Install cross-compilation dependencies (aarch64 dbus & alsa)
+        run: |
           # Install cross-compiler and arm64 versions of libraries
           sudo apt-get install -y --no-install-recommends \
             gcc-aarch64-linux-gnu \
@@ -102,7 +115,7 @@ jobs:
           sudo mkdir -p /usr/lib/aarch64-linux-gnu/pkgconfig
           # Link only if the source directory exists and has files
           if [ -d "/usr/lib/aarch64-linux-gnu/pkgconfig" ] && [ "$(ls -A /usr/lib/aarch64-linux-gnu/pkgconfig)" ]; then
-            sudo ln -s /usr/lib/aarch64-linux-gnu/pkgconfig/* /usr/share/pkgconfig/ || echo "Symlinks might already exist or source is empty."
+            sudo ln -sf /usr/lib/aarch64-linux-gnu/pkgconfig/* /usr/share/pkgconfig/ || echo "Symlinks might already exist or source is empty."
           else
             echo "Skipping symlink creation as /usr/lib/aarch64-linux-gnu/pkgconfig is empty or does not exist."
           fi
