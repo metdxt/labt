@@ -10,6 +10,7 @@ repository = "https://github.com/metdxt/labt"
 readme = "README.md"
 keywords = ["cli", "timer"]
 categories = ["command-line-utilities"]
+exclude = ["examples/*", ".github/*", "assets/logo.svg"]
 
 [dependencies]
 notify-rust = { version = "4", default-features = false, features = ["d"] }
