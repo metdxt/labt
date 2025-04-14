@@ -1,162 +1,143 @@
-# **Labt (Lab Timer)**
+# Labt - Future Gadget #16: Worldline-Accurate Timer
 
-*A worldline-accurate CLI timer*  
+<table>
+  <tr>
+  <td>
+  
+  *"Oh no, my watch has stopped... But I've just wound it... Don't tell me it's broken." - Mayushii*
 
-> *"Time waits for no one... but this timer waits for you."*  
-> — *Hououin Kyouma, probably*  
+  </td>
+  <td>
 
----
+  ![](/assets/logo.svg)
 
-## **Installation**  
+  </td>
+  </tr>
+</table>
 
-Prebuild binaries are available for x86_64 Linux and Windows in the [latest release](https://github.com/metdxt/labt/releases/latest).
 
-Or you can build and install it yourself with:
+
+## Description
+
+Developed by the Future Gadget Lab, Labt (codenamed FG-016) is a worldline-accurate countdown timer with cross-dimensional notification support.
+
+## Features
+
+- ⏲️ **Accurate Countdown**: Every second counts
+- 📢 **Desktop Notifications**: Native system alerts on completion
+- 🔔 **Mayuri Alarm**: Default "tuturu" sound (disable with `-s`)
+- 📟 **Script-Friendly**: Non-interactive mode for lab use
+- 🔕 **Stealth Mode**: Silent operation for covert operations
+- 🌐 **Cross-Worldline**: Tested across 0.348615% divergence
+- 🦀 **Implemented in Rust**: So that your watch is never *broken*.
+
+## Installation
+
+### Prebuilt binaries
+
+Prebuilt binaries are available for x86_64 Linux and Windows in [releases](https://github.com/metdxt/labt/releases).
+Just download a fitting one and put it in some `PATH` directory.
+
+*NOTE: don't forget to `chmod +x` on linux.*
+
+### Using Cargo
 
 ```bash
 cargo install --git https://github.com/metdxt/labt
 ```
-*(Requires [Rust](https://rustup.rs/))*  
 
----
+Cargo will collect the source code and build it on your machine.
+Build time is rather small, about 11 seconds on lab's hardware.
 
-## **Usage**  
-Set a timer with **hours**, **minutes**, or **seconds**:  
-```bash
-labt -M 30          # 30-minute timer
-labt -H 1 -M 15     # 1 hour 15 minutes
-labt -S 10          # 10-second countdown
-```
 
-### **Features**  
-- 🔔 **"Tu-tu-ru~" alarm sound** (Mayuri-approved)  
-- 🔕 Silent mode (`-s`) for stealthy lab experiments  
-- 📝 Custom notifications (`-t "Title" -b "Message"`)  
-- 🤫 Quiet mode (`-q`) for scripts  
+**System Requirements**:
 
-### **Options**  
-```
--H, --hours      Hours  
--M, --minutes    Minutes  
--S, --seconds    Seconds  
--t, --title      Notification title (default: "Timer Finished!")  
--b, --body       Custom notification body  
--n, --no-notify  Disable notifications  
--s, --no-sound   Disable alarm sound  
--q, --quiet      No output (for scripts)  
--N, --non-interactive  Print full output (no fancy \r)  
-```
+- Linux: DBus (for notifications), ALSA (for sound)
+- Windows: Windows 10+ (notifications require Action Center)
 
----
+## Usage
 
-## **Examples**  
-```bash
-# Lab experiment countdown (with sound + notification)  
-labt -M 90 -t "Experiment Complete" -b "Remove banana from microwave"  
-
-# Silent mode for hacking SERN  
-labt -H 2 -s -q  
-
-# Worldline divergence measurement  
-labt -S 42 -t "Divergence reached"  
-```
-
-## **Scripting Examples**
-
-### **Pomodoro Time Loop**
-
-Create a [`pomodoro`](examples/pomodoro) script for time management:
+### Basic Syntax
 
 ```bash
-#!/bin/bash
-# Default: 4 sessions of 25m work + 5m break
-sessions=4
-work_mins=25
-break_mins=5
-
-for ((i=1; i<=sessions; i++)); do
-    echo "🚀 Work Session $i/$sessions | $(date +%H:%M)"
-    labt -M $work_mins -t "Good job! Time to rest!" -b "Mayushii wants tea!"
-
-    exit_code=$?
-    if [[ $exit_code -eq 2 ]]; then # labt returns code 2 when timer is interrupted with ctrl+c by user
-        exit 2
-    fi
-    
-    echo "☕ Break Time! | $(date +%H:%M)"
-    [[ $i -lt $sessions ]] && labt -M $break_mins -t "Back to experiments!" -b "Tutturu!~ Time to focus!"
-done
-
-echo "🎉 All sessions complete!"
+labt [OPTIONS] --hours <HOURS> --minutes <MINUTES> --seconds <SECONDS>
 ```
 
-### **HIIT timer**
+### Options
 
-Healthy body is prerequisite for healthy mind of a mad scientist!
+| Option | Description                          | Example                    |
+|--------|--------------------------------------|----------------------------|
+| `-H`   | Hours component                      | `-H 2`                     |
+| `-M`   | Minutes component                    | `-M 30`                    |
+| `-S`   | Seconds component                    | `-S 45`                    |
+| `-t`   | Notification title                   | `-t "Experiment Complete"` |
+| `-b`   | Custom notification body             | `-b "Divergence reached"`  |
+| `-n`   | Disable notifications                | `-n`                       |
+| `-s`   | Disable alarm sound                  | `-s`                       |
+| `-q`   | Quiet mode (no output)               | `-q`                       |
+| `-N`   | Non-interactive (script-friendly)    | `-N`                       |
 
-```bash
-#!/bin/bash
-# HIIT Timer - Forge your convergence station!
+### Examples
 
-# Default intervals (seconds)
-WORK=30
-REST=10
-ROUNDS=8
-WARMUP=90
-COOLDOWN=60
+1. **Standard 25-minute timer:**
+   ```bash
+   labt -M 25
+   ```
 
-# Parse arguments
-while getopts "w:r:R:W:C:" opt; do
-  case $opt in
-    w) WORK=$OPTARG ;;
-    r) REST=$OPTARG ;;
-    R) ROUNDS=$OPTARG ;;
-    W) WARMUP=$OPTARG ;;
-    C) COOLDOWN=$OPTARG ;;
-    *) echo "Usage: $0 [-w work_sec] [-r rest_sec] [-R rounds] [-W warmup] [-C cooldown]"
-       exit 1
-  esac
-done
+2. **1h30m experiment with custom message:**
+   ```bash
+   labt -H 1 -M 30 -t "Phase 2 Complete" -b "Prepare for convergence"
+   ```
 
-# Time warp protocol
-echo "=== HIIT Session ==="
-echo "Work: ${WORK}s | Rest: ${REST}s | Rounds: $ROUNDS"
-[[ $WARMUP -gt 0 ]] && echo "Warm-up: ${WARMUP}s"
-[[ $COOLDOWN -gt 0 ]] && echo "Cooldown: ${COOLDOWN}s"
+3. **Silent 10-second countdown:**
+   ```bash
+   labt -S 10 -q -n -s
+   ```
 
-# Warm-up phase
-if [[ $WARMUP -gt 0 ]]; then
-  labt -S $WARMUP -t "READY FOR WAR" -b "Target ${ROUNDS} convergence(s)" -n
-fi
+4. **Script-friendly mode:**
+   ```bash
+   labt -M 5 -N > timer.log
+   ```
 
-# HIIT Rounds
-for ((i=1; i<=ROUNDS; i++)); do
-  echo -e "\n🔥 ROUND $i/$ROUNDS [WORK]"
-  labt -S $WORK -t "MAXIMUM OUTPUT!" -b "This is the choice of Steins Gate" -n
-  
-  if [[ $i -ne $ROUNDS ]]; then
-    echo -e "\n🕳 ROUND $i/$ROUNDS [REST]"
-    labt -S $REST -t "RECURSIVE RECOVERY" -b "Divergence meter: $i/$ROUNDS" -n
-  fi
-done
+## Notification System
 
-# Cooldown phase
-if [[ $COOLDOWN -gt 0 ]]; then
-  echo -e "\n❄️  Entering cryostasis"
-  labt -S $COOLDOWN -t "WORLDLINE STABILIZED" -b "Reading Steiner activated" -n
-fi
+Labt uses your system's native notification system with these defaults:
 
-echo -e "\n🎉 Time fracture complete! (Divergence: 1.048596%)"
-```
+- **Title**: "Timer Finished!"
+- **Body**: Auto-generated based on input duration
+- **Icon**: `alarm-symbolic` (system default fallback)
 
----
+Customize with `-t`/`--notification-title` and `-b`/`--notification-body`.
 
-## **Why "Labt"?**  
-- Short for **Lab Timer** (used by the Future Gadget Lab).  
-- Easy to type.  
+## Alarm Sound
 
----
+Default alarm sound features Mayuri's iconic "tuturu" (⚠️ Requires audio output).  
+Disable with `-s` or use `-n` for complete silence.
 
-*(Timer accuracy not guaranteed in alternate worldlines.)*  
+## Exit Codes
 
----
+| Code | Meaning                      |
+|------|------------------------------|
+| 0    | Timer completed successfully |
+| 1    | Invalid duration specified   |
+| 2    | Interrupted (Ctrl+C)         |
+
+## Contributing
+
+We welcome contributions across all worldlines!  
+Please follow these guidelines:
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b worldline-42`)
+3. Commit changes (`git commit -am 'Added δ worldline support'`)
+4. Push to branch (`git push origin worldline-42`)
+5. Open a Pull Request
+
+## License
+
+Distributed under the MIT License. See `LICENSE` for details.
+
+## Acknowledgments
+
+- Future Gadget Lab members
+- clap, notify-rust, and rodio crate maintainers

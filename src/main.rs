@@ -17,7 +17,7 @@ fn format_duration(total_seconds: u64) -> String {
     format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
 }
 
-/// Future Gadget #8: "Labt" - Worldline-accurate countdown device
+/// Future Gadget #16: "Labt" - Worldline-accurate countdown device
 #[derive(Parser, Debug)]
 #[command(
     version = concat!(env!("CARGO_PKG_VERSION"), " (commit: ", env!("GIT_HASH"), ")"),
@@ -32,7 +32,7 @@ struct CliArgs {
         long,
         value_name = "HOURS",
         default_value_t = 0,
-        help = "⌛ Hours until worldline shift (0-∞)"
+        help = "⌛ Hours"
     )]
     hours: u64,
 
@@ -42,7 +42,7 @@ struct CliArgs {
         long,
         value_name = "MINUTES",
         default_value_t = 0,
-        help = "⏰ Minutes until Mayuri's tuturu (0-59)"
+        help = "⏰ Minutes"
     )]
     minutes: u64,
 
@@ -52,17 +52,17 @@ struct CliArgs {
         long,
         value_name = "SECONDS",
         default_value_t = 0,
-        help = "⚡ Seconds until Organization intervention (0-59)"
+        help = "⚡ Seconds"
     )]
     seconds: u64,
 
-    /// Notification title (default: "Timer Finished!")
+    /// Notification title
     #[arg(
         short = 't',
         long,
         value_name = "TITLE",
         default_value = "Timer Finished!",
-        help = "📢 D-Mail subject line [default: 'Timer Finished!']"
+        help = "📢 D-Mail subject line"
     )]
     notification_title: String,
 
@@ -71,7 +71,7 @@ struct CliArgs {
         short = 'b',
         long,
         value_name = "BODY",
-        help = "📝 Optional D-Mail body text"
+        help = "📝 D-Mail body text"
     )]
     notification_body: Option<String>,
 
@@ -95,7 +95,7 @@ struct CliArgs {
     #[arg(
         short = 'q',
         long,
-        help = "🤐 Quiet mode (for SERN spies)"
+        help = "🤐 Quiet mode (no CLI output)"
     )]
     quiet: bool,
 
