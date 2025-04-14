@@ -72,7 +72,6 @@ jobs:
           name: labt-windows-x86_64 # Unique name for the artifact
           path: labt-windows-x86_64.zip
 
-  # Job to build for Linux aarch64 (cross-compilation)
   build_linux_aarch64:
     name: Build Linux (aarch64)
     runs-on: ubuntu-latest
@@ -88,17 +87,33 @@ jobs:
 
       - name: Install cross-compilation dependencies (aarch64 dbus & alsa)
         run: |
+          # Add the arm64 architecture
+          sudo dpkg --add-architecture arm64
+          # Update package lists AFTER adding the architecture
           sudo apt-get update -y
           # Install cross-compiler and arm64 versions of libraries
-          sudo apt-get install -y gcc-aarch64-linux-gnu libdbus-1-dev:arm64 libasound2-dev:arm64 pkg-config
+          sudo apt-get install -y --no-install-recommends \
+            gcc-aarch64-linux-gnu \
+            libdbus-1-dev:arm64 \
+            libasound2-dev:arm64 \
+            pkg-config
           # Ensure pkg-config can find the cross-compiled libraries
-          sudo ln -s /usr/lib/aarch64-linux-gnu/pkgconfig/* /usr/share/pkgconfig/ || echo "Symlinks might already exist"
+          # Create the target directory if it doesn't exist
+          sudo mkdir -p /usr/lib/aarch64-linux-gnu/pkgconfig
+          # Link only if the source directory exists and has files
+          if [ -d "/usr/lib/aarch64-linux-gnu/pkgconfig" ] && [ "$(ls -A /usr/lib/aarch64-linux-gnu/pkgconfig)" ]; then
+            sudo ln -s /usr/lib/aarch64-linux-gnu/pkgconfig/* /usr/share/pkgconfig/ || echo "Symlinks might already exist or source is empty."
+          else
+            echo "Skipping symlink creation as /usr/lib/aarch64-linux-gnu/pkgconfig is empty or does not exist."
+          fi
+
 
       - name: Build binary (cross-compile)
         # Set environment variables needed for cross-compiling C dependencies
         run: |
           export PKG_CONFIG_ALLOW_CROSS=1
-          export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
+          # Point pkg-config specifically to the cross-arch paths
+          export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig
           export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
           cargo build --release --target aarch64-unknown-linux-gnu --verbose
         env:
