@@ -43,7 +43,9 @@ Just download a fitting one and put it in some `PATH` directory.
 ### Using Cargo
 
 ```bash
-cargo install --git https://github.com/metdxt/labt
+cargo install labtimer
+# OR from git repo directly
+# cargo install --git https://github.com/metdxt/labt
 ```
 
 Cargo will collect the source code and build it on your machine.
