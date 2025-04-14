@@ -1,6 +1,6 @@
 use clap::Parser;
 use notify_rust::Notification;
-use rodio::OutputStreamHandle;
+use rodio::{OutputStreamHandle, PlayError, StreamError};
 use std::io::{stdout, Write};
 use std::process;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -10,23 +10,11 @@ use std::time::Duration;
 use std::io::Cursor;
 use rodio::{ Decoder, OutputStream, Sink};
 
-const ALARM_SOUND_DATA: &[u8] = include_bytes!("../assets/alarm.ogg");
-
 fn format_duration(total_seconds: u64) -> String {
     let hours = total_seconds / 3600;
     let minutes = (total_seconds % 3600) / 60;
     let seconds = total_seconds % 60;
     format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
-}
-
-fn play_alarm(stream_handle: OutputStreamHandle) -> Result<(), Box<dyn std::error::Error>> {
-    let cursor = Cursor::new(ALARM_SOUND_DATA);
-    let source = Decoder::new(cursor)?;
-    
-    let sink = Sink::try_new(&stream_handle)?;
-    sink.append(source);
-    sink.sleep_until_end();
-    Ok(())
 }
 
 /// Future Gadget #8: "Labt" - Worldline-accurate countdown device
@@ -120,13 +108,39 @@ struct CliArgs {
     non_interactive: bool,
 }
 
+
+struct AudioPlayer {
+    audio_stream: (OutputStream, OutputStreamHandle)
+}
+
+impl AudioPlayer {
+    const ALARM_SOUND_DATA: &[u8] = include_bytes!("../assets/alarm.ogg");
+
+    fn new() -> Result<Self, StreamError> {
+        Ok(Self { audio_stream: OutputStream::try_default()? })
+    }
+
+    fn play_alarm(&self) -> Result<(), PlayError> {
+        let cursor = Cursor::new(AudioPlayer::ALARM_SOUND_DATA);
+        let decoder = Decoder::new(cursor)?;
+        let sink = Sink::try_new(&self.audio_stream.1)?;
+        sink.append(decoder);
+        sink.sleep_until_end();
+        Ok(())
+    }
+}
+
+fn ep(quiet: bool, msg: &str) {
+    if !quiet { eprintln!("{msg}") }
+}
+
 fn main() {
     let args = CliArgs::parse();
     let total_seconds = args.hours * 3600 + args.minutes * 60 + args.seconds;
 
     if total_seconds == 0 {
-        eprintln!("Error: Total duration must be greater than 0 seconds.");
-        eprintln!("Specify desired time with -H/--hours, -M/--minutes and/or -S/--seconds arguments.");
+        ep(args.quiet, "Error: Total duration must be greater than 0 seconds.");
+        ep(args.quiet, "Specify desired time with -H/--hours, -M/--minutes and/or -S/--seconds arguments.");
         process::exit(1);
     }
 
@@ -141,27 +155,23 @@ fn main() {
         args.hours, args.minutes, args.seconds
     );
 
-    // initialize audio stream early to avoid audio cold start silence
-    let audio_stream = if !args.disable_sound {
-        match OutputStream::try_default() {
-            Ok((stream, handle)) => Some((stream, handle)),
+    let audio_player = if !args.disable_sound {
+        let player = AudioPlayer::new();
+        match player {
+            Ok(player) => {
+                Some(player)
+            },
             Err(e) => {
-                if !args.quiet {
-                    eprintln!("Failed to initialize audio: {}", e);
-                }
+                ep(args.quiet, &format!("Failed to create audio player: {e}"));
                 None
             }
         }
-    } else {
-        None
-    };
+    } else { None };
 
     // Countdown
     for remaining in (1..=total_seconds).rev() {
         if interrupted.load(Ordering::SeqCst) {
-            if !args.quiet {
-                eprintln!("\nTimer interrupted!");
-            }
+            ep(args.quiet, "\nTimer interrupted!");
             process::exit(2);
         }
 
@@ -200,18 +210,14 @@ fn main() {
             .icon("alarm-symbolic")
             .show()
         {
-            if !args.quiet {
-                eprintln!("Failed to send notification: {}", e);
-            }
+            ep(args.quiet, &format!("Failed to send notification: {}", e));
         }
     }
 
     // Play sound if not disabled
-    if let Some((_stream, stream_handle)) = audio_stream {
-        if let Err(e) = play_alarm(stream_handle) {
-            if !args.quiet {
-                eprintln!("Failed to play sound: {}", e);
-            }
+    if let Some(player) = audio_player {
+        if let Err(e) = player.play_alarm() {
+            ep(args.quiet, &format!("{e}"));
         }
     }
 }
