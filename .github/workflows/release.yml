@@ -1,77 +1,149 @@
-name: Build and Release
+name: Release Build for labt
 
+# Trigger the workflow on pushes to tags matching v*.*.* (e.g., v1.0.0, v0.1.2)
 on:
   push:
-    tags: ["v*"]
-  workflow_dispatch:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
-  build:
+  # Job to build for Linux x86_64
+  build_linux_x86_64:
+    name: Build Linux (x86_64)
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        target: [x86_64-unknown-linux-gnu, x86_64-pc-windows-gnu]
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libasound2-dev \
-            pkg-config \
-            gcc-mingw-w64-x86-64 \
-            libdbus-1-dev
-
-      - name: Install Rust
+      - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          toolchain: stable
+          targets: x86_64-unknown-linux-gnu
 
-      - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Prepare Artifact
-        shell: bash
+      - name: Install Linux dependencies (dbus & alsa)
         run: |
-          # Determine binary name
-          if [[ "${{ matrix.target }}" == *"windows"* ]]; then
-            BIN_NAME="labt.exe"
-          else
-            BIN_NAME="labt"
-          fi
+          sudo apt-get update -y
+          sudo apt-get install -y libdbus-1-dev libasound2-dev pkg-config
 
-          # Create unique artifact directory
-          mkdir -p "artifact-${{ matrix.target }}"
-          
-          # Copy binary with consistent naming
-          cp "target/${{ matrix.target }}/release/$BIN_NAME" "artifact-${{ matrix.target }}/labt-${{ matrix.target }}${BIN_NAME#labt}"
+      - name: Build binary
+        run: cargo build --release --target x86_64-unknown-linux-gnu --verbose
 
-      - name: Upload Artifact
+      - name: Package artifact
+        run: |
+          mkdir dist
+          cp target/x86_64-unknown-linux-gnu/release/labt dist/labt-linux-x86_64
+          tar -czvf labt-linux-x86_64.tar.gz -C dist .
+
+      - name: Upload artifact for release
         uses: actions/upload-artifact@v4
         with:
-          name: labt-${{ matrix.target }}
-          path: "artifact-${{ matrix.target }}/labt-${{ matrix.target }}*"
+          name: labt-linux-x86_64 # Unique name for the artifact
+          path: labt-linux-x86_64.tar.gz
 
-  release:
-    needs: build
+  # Job to build for Windows x86_64
+  build_windows_x86_64:
+    name: Build Windows (x86_64)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: x86_64-pc-windows-msvc
+
+      # No specific dbus/alsa dependencies needed for Windows build typically
+      - name: Build binary
+        run: cargo build --release --target x86_64-pc-windows-msvc --verbose
+
+      - name: Package artifact
+        shell: pwsh # Use PowerShell for Compress-Archive
+        run: |
+          mkdir dist
+          cp target/x86_64-pc-windows-msvc/release/labt.exe dist/labt-windows-x86_64.exe
+          Compress-Archive -Path dist/* -DestinationPath labt-windows-x86_64.zip
+
+      - name: Upload artifact for release
+        uses: actions/upload-artifact@v4
+        with:
+          name: labt-windows-x86_64 # Unique name for the artifact
+          path: labt-windows-x86_64.zip
+
+  # Job to build for Linux aarch64 (cross-compilation)
+  build_linux_aarch64:
+    name: Build Linux (aarch64)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: aarch64-unknown-linux-gnu
+
+      - name: Install cross-compilation dependencies (aarch64 dbus & alsa)
+        run: |
+          sudo apt-get update -y
+          # Install cross-compiler and arm64 versions of libraries
+          sudo apt-get install -y gcc-aarch64-linux-gnu libdbus-1-dev:arm64 libasound2-dev:arm64 pkg-config
+          # Ensure pkg-config can find the cross-compiled libraries
+          sudo ln -s /usr/lib/aarch64-linux-gnu/pkgconfig/* /usr/share/pkgconfig/ || echo "Symlinks might already exist"
+
+      - name: Build binary (cross-compile)
+        # Set environment variables needed for cross-compiling C dependencies
+        run: |
+          export PKG_CONFIG_ALLOW_CROSS=1
+          export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
+          export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+          cargo build --release --target aarch64-unknown-linux-gnu --verbose
+        env:
+          # Explicitly tell common sys crates to use pkg-config
+          DBUS_SYS_USE_PKG_CONFIG: 1
+          ALSA_SYS_USE_PKG_CONFIG: 1
+
+      - name: Package artifact
+        run: |
+          mkdir dist
+          cp target/aarch64-unknown-linux-gnu/release/labt dist/labt-linux-aarch64
+          tar -czvf labt-linux-aarch64.tar.gz -C dist .
+
+      - name: Upload artifact for release
+        uses: actions/upload-artifact@v4
+        with:
+          name: labt-linux-aarch64 # Unique name for the artifact
+          path: labt-linux-aarch64.tar.gz
+
+  # Job to create the GitHub Release
+  create_release:
+    name: Create GitHub Release
+    # This job runs only after all specified build jobs are successful
+    needs: [build_linux_x86_64, build_windows_x86_64, build_linux_aarch64]
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write # Permission needed to create releases and upload assets
+
     steps:
-      - name: Download All Artifacts
+      - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
-          path: release-files
-          pattern: labt-*
-          merge-multiple: true
+          path: artifacts # Download all artifacts into the 'artifacts' directory
 
-      - name: List Downloaded Files (Debug)
-        run: ls -la release-files/
+      - name: List downloaded files (for debugging)
+        run: ls -R artifacts
 
-      - uses: softprops/action-gh-release@v1
+      - name: Create Release and Upload Assets
+        uses: ncipollo/release-action@v1
         with:
-          files: release-files/labt-*
-          body: |
-            **Labt ${{ github.ref_name }}**  
-            *"Time waits for no worldline!"*
+          # Define the pattern to find assets within the downloaded artifact directories
+          artifacts: "artifacts/*/*"
+          # Use the default GITHUB_TOKEN provided by Actions
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Automatically generate release notes from commits since the last tag
+          generateReleaseNotes: true
+          # Allow the action to overwrite assets if the tag is pushed again (useful for fixes)
+          allowUpdates: true
