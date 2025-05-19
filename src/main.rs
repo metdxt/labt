@@ -1,4 +1,5 @@
 use clap::Parser;
+use indicatif::ProgressBar;
 use notify_rust::Notification;
 use rodio::{OutputStreamHandle, PlayError, StreamError};
 use std::io::{stdout, Write};
@@ -168,6 +169,18 @@ fn main() {
         }
     } else { None };
 
+    let pb = if !args.non_interactive && !args.quiet {
+        let pb = ProgressBar::new(total_seconds);
+        pb.set_style(
+            indicatif::ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{bar:25.red/blue}] [{eta_precise}]")
+                .unwrap()
+                .progress_chars("~>-")
+        );
+        Some(pb)
+    } else {
+        None
+    };
+
     // Countdown
     for remaining in (1..=total_seconds).rev() {
         if interrupted.load(Ordering::SeqCst) {
@@ -175,7 +188,9 @@ fn main() {
             process::exit(2);
         }
 
-        if !args.quiet {
+        if let Some(ref pb) = pb {
+            pb.set_position(total_seconds - remaining);
+        } else if !args.quiet {
             if args.non_interactive {
                 println!("Time remaining: {}", format_duration(remaining));
             } else {
@@ -187,7 +202,9 @@ fn main() {
         thread::sleep(Duration::from_secs(1));
     }
 
-    if !args.quiet {
+    if let Some(pb) = pb {
+        pb.finish_with_message("Timer complete!");
+    } else if !args.quiet {
         if args.non_interactive {
             println!("Time remaining: 00:00:00");
         } else {

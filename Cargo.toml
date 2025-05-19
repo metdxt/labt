@@ -21,6 +21,7 @@ notify-rust = { version = "4", default-features = false, features = ["d"] }
 clap = { version = "4", features = ["derive"] }
 rodio = "0.20.1"
 ctrlc = "3.4"
+indicatif = "0.17"
 
 [target.'cfg(windows)'.dependencies]
 notify-rust = { version = "4", default-features = true }
